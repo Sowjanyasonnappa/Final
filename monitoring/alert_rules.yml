@@ -1,0 +1,157 @@
+groups:
+  - name: kubernetes
+    interval: 30s
+    rules:
+      # Node Health
+      - alert: NodeNotReady
+        expr: kube_node_status_condition{condition="Ready",status="true"} == 0
+        for: 5m
+        labels:
+          severity: critical
+          component: kubernetes
+        annotations:
+          summary: "Node {{ $labels.node }} is not ready"
+          description: "Node {{ $labels.node }} has been unready for more than 5 minutes"
+
+      # Pod Alerts
+      - alert: PodCrashLooping
+        expr: rate(kube_pod_container_status_restarts_total[15m]) > 0.1
+        for: 5m
+        labels:
+          severity: high
+          component: kubernetes
+        annotations:
+          summary: "Pod {{ $labels.pod }} is crash looping"
+          description: "Pod {{ $labels.namespace }}/{{ $labels.pod }} is restarting frequently"
+
+      - alert: PodNotRunning
+        expr: sum by (namespace, pod) (kube_pod_status_phase{phase=~"Failed|Unknown|Pending"}) > 0
+        for: 15m
+        labels:
+          severity: warning
+          component: kubernetes
+        annotations:
+          summary: "Pod {{ $labels.pod }} is not running"
+          description: "Pod {{ $labels.namespace }}/{{ $labels.pod }} has been in {{ $value }} phase for 15 minutes"
+
+      # Deployment Alerts
+      - alert: DeploymentReplicasMismatch
+        expr: kube_deployment_spec_replicas != kube_deployment_status_replicas_available
+        for: 10m
+        labels:
+          severity: warning
+          component: kubernetes
+        annotations:
+          summary: "Deployment {{ $labels.deployment }} replica mismatch"
+          description: "Deployment {{ $labels.namespace }}/{{ $labels.deployment }} has not matched the expected number of replicas"
+
+      - alert: DeploymentGenerationMismatch
+        expr: kube_deployment_status_observed_generation != kube_deployment_metadata_generation
+        for: 15m
+        labels:
+          severity: warning
+          component: kubernetes
+        annotations:
+          summary: "Deployment {{ $labels.deployment }} generation mismatch"
+          description: "Deployment {{ $labels.namespace }}/{{ $labels.deployment }} has not progressed"
+
+      # StatefulSet Alerts
+      - alert: StatefulsetReplicasMismatch
+        expr: kube_statefulset_status_replicas_ready != kube_statefulset_status_replicas
+        for: 15m
+        labels:
+          severity: warning
+          component: kubernetes
+        annotations:
+          summary: "StatefulSet {{ $labels.statefulset }} replica mismatch"
+          description: "StatefulSet {{ $labels.namespace }}/{{ $labels.statefulset }} replicas not ready"
+
+      # Resource Alerts
+      - alert: ContainerOomKiller
+        expr: kube_pod_container_status_last_terminated_reason{reason="OOMKilled"} > 0
+        for: 0m
+        labels:
+          severity: critical
+          component: kubernetes
+        annotations:
+          summary: "Container OOM killed (instance {{ $labels.pod }})"
+          description: "Container {{ $labels.container }} in pod {{ $labels.namespace }}/{{ $labels.pod }} was OOM killed"
+
+      - alert: PersistentVolumeFillingUp
+        expr: (kubelet_volume_stats_used_bytes / kubelet_volume_stats_capacity_bytes) > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          component: kubernetes
+        annotations:
+          summary: "PersistentVolume filling up ({{ $value | humanizePercentage }})"
+          description: "PersistentVolume {{ $labels.persistentvolumeclaim }} in {{ $labels.namespace }} is 90% full"
+
+  - name: system
+    interval: 30s
+    rules:
+      # CPU Alerts
+      - alert: HighCpuUsage
+        expr: (1 - (avg by (instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])))) > 0.9
+        for: 10m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "High CPU usage on {{ $labels.instance }}"
+          description: "CPU usage is above 90% on {{ $labels.instance }}"
+
+      # Memory Alerts
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) > 0.9
+        for: 10m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "High memory usage on {{ $labels.instance }}"
+          description: "Memory usage is above 90% on {{ $labels.instance }}"
+
+      # Disk Alerts
+      - alert: DiskSpaceFillingUp
+        expr: (node_filesystem_avail_bytes{fstype!~"tmpfs"} / node_filesystem_size_bytes) < 0.1
+        for: 5m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "Disk space filling up on {{ $labels.instance }}"
+          description: "Disk {{ $labels.device }} on {{ $labels.instance }} has less than 10% space available"
+
+      - alert: DiskReadLatency
+        expr: rate(node_disk_read_time_seconds_total[5m]) / rate(node_disk_reads_completed_total[5m]) > 0.1
+        for: 10m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "High disk read latency on {{ $labels.instance }}"
+          description: "Disk read latency is high on {{ $labels.instance }}"
+
+  - name: application
+    interval: 30s
+    rules:
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.05
+        for: 10m
+        labels:
+          severity: warning
+          component: application
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is above 5%"
+
+      - alert: HighLatency
+        expr: histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m])) > 1
+        for: 10m
+        labels:
+          severity: warning
+          component: application
+        annotations:
+          summary: "High request latency detected"
+          description: "99th percentile latency is above 1 second"

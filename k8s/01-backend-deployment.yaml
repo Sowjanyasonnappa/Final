@@ -1,0 +1,244 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: streamsentinel
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: streamsentinel-config
+  namespace: streamsentinel
+data:
+  LOG_LEVEL: "INFO"
+  DEBUG: "false"
+  KUBERNETES_CONTEXT: "docker-desktop"
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: streamsentinel-secrets
+  namespace: streamsentinel
+type: Opaque
+stringData:
+  DATABASE_URL: "postgresql://streamsentinel:streamsentinel123@postgres:5432/streamsentinel"
+  SECRET_KEY: "your-secret-key-change-in-production"
+  OPENAI_API_KEY: "sk-xxx-xxxxxx"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: streamsentinel-backend
+  namespace: streamsentinel
+  labels:
+    app: streamsentinel
+    component: backend
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: streamsentinel
+      component: backend
+  template:
+    metadata:
+      labels:
+        app: streamsentinel
+        component: backend
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: streamsentinel-backend
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+      - name: backend
+        image: streamsentinel-backend:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 8000
+          protocol: TCP
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: streamsentinel-secrets
+              key: DATABASE_URL
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: streamsentinel-secrets
+              key: SECRET_KEY
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: streamsentinel-secrets
+              key: OPENAI_API_KEY
+              optional: true
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: streamsentinel-config
+              key: LOG_LEVEL
+        - name: DEBUG
+          valueFrom:
+            configMapKeyRef:
+              name: streamsentinel-config
+              key: DEBUG
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - streamsentinel
+              topologyKey: kubernetes.io/hostname
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: streamsentinel-backend
+  namespace: streamsentinel
+  labels:
+    app: streamsentinel
+    component: backend
+spec:
+  type: ClusterIP
+  selector:
+    app: streamsentinel
+    component: backend
+  ports:
+  - name: http
+    port: 8000
+    targetPort: 8000
+    protocol: TCP
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: streamsentinel-backend-hpa
+  namespace: streamsentinel
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: streamsentinel-backend
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: streamsentinel-backend-pdb
+  namespace: streamsentinel
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: streamsentinel
+      component: backend
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: streamsentinel-backend
+  namespace: streamsentinel
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: streamsentinel-backend
+rules:
+- apiGroups: [""]
+  resources: ["pods", "nodes", "services", "namespaces"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "statefulsets", "daemonsets", "replicasets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["batch"]
+  resources: ["jobs", "cronjobs"]
+  verbs: ["get", "list", "watch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: streamsentinel-backend
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: streamsentinel-backend
+subjects:
+- kind: ServiceAccount
+  name: streamsentinel-backend
+  namespace: streamsentinel
