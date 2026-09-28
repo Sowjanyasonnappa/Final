@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://127.0.0.1:8000',
+  baseURL: import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000',
   headers: { 'Content-Type': 'application/json' }
 });
 
@@ -21,6 +21,8 @@ api.interceptors.response.use(
   error => {
     if (error.response && error.response.status === 401) {
       localStorage.removeItem('token');
+      delete api.defaults.headers.common.Authorization;
+      window.dispatchEvent(new Event('auth:unauthorized'));
       window.location.href = '/login';
     }
     return Promise.reject(error);

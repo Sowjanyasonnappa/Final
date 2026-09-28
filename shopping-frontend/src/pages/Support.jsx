@@ -7,7 +7,7 @@ export default function Support() {
       </div>
       <div className="card-surface p-8">
         <p className="text-lg text-slate-300">Need help with orders, billing, or product access? Our support team can assist with anything from onboarding to troubleshooting.</p>
-        <div className="mt-6 grid gap-4 rounded-[24px] border border-white/10 bg-white/8 p-6 sm:grid-cols-3">
+        <div className="mt-6 grid gap-4 rounded-3xl border border-white/10 bg-white/8 p-6 sm:grid-cols-3">
           <div>
             <p className="text-sm text-slate-400">Team</p>
             <p className="mt-1 font-semibold text-white">Commerce Success Desk</p>

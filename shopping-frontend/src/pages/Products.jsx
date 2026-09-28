@@ -60,7 +60,17 @@ export default function Products() {
               <option value="rating">Rating</option>
             </select>
           </label>
-          <button className="btn-secondary rounded-2xl">Filter</button>
+          <button
+            className="btn-secondary rounded-2xl"
+            type="button"
+            onClick={() => {
+              setSearch('');
+              setCategory('All');
+              setSort('featured');
+            }}
+          >
+            Reset
+          </button>
         </div>
       </div>
 
@@ -75,8 +85,8 @@ export default function Products() {
                 <span className="rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-1 text-xs font-semibold text-amber-300">-{product.discount}%</span>
               ) : null}
             </div>
-            <div className="mb-4 h-44 overflow-hidden rounded-[22px] border border-white/10 bg-gradient-to-br from-blue-500/20 via-violet-500/20 to-cyan-400/20 p-3">
-              <img src={product.image || product.images?.[0]} alt={product.name} className="h-full w-full rounded-[18px] object-cover transition duration-500 group-hover:scale-105" />
+            <div className="mb-4 h-44 overflow-hidden rounded-2xl border border-white/10 bg-linear-to-br from-blue-500/20 via-violet-500/20 to-cyan-400/20 p-3">
+              <img src={product.image || product.images?.[0]} alt={product.name} className="h-full w-full rounded-2xl object-cover transition duration-500 group-hover:scale-105" />
             </div>
             <div className="flex items-start justify-between gap-3">
               <div>

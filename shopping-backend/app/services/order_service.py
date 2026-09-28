@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 import asyncio
 
 from sqlalchemy.orm import Session
@@ -21,6 +21,22 @@ from app.utils.email_templates import (
     delivered,
     cancelled,
 )
+
+
+def _send_email_safely(recipient, subject, body):
+    coroutine = send_email(recipient, subject, body)
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        asyncio.run(coroutine)
+    else:
+        loop.create_task(coroutine)
+
+
+def _coupon_is_expired(expiry_date):
+    if expiry_date.tzinfo is None:
+        expiry_date = expiry_date.replace(tzinfo=timezone.utc)
+    return expiry_date < datetime.now(timezone.utc)
 
 
 def checkout(
@@ -49,6 +65,7 @@ def checkout(
 
         product = (
             db.query(Product)
+            .with_for_update()
             .filter(Product.id == cart_item.product_id)
             .first()
         )
@@ -92,7 +109,7 @@ def checkout(
 
         if (
             coupon is None
-            or coupon.expiry_date < datetime.utcnow()
+            or _coupon_is_expired(coupon.expiry_date)
         ):
             raise HTTPException(
                 status_code=400,
@@ -166,15 +183,10 @@ def checkout(
 
         db.refresh(order)
 
-        asyncio.create_task(
-            send_email(
-                user.email,
-                "Order Confirmation",
-                order_confirmation(
-                    user,
-                    order,
-                ),
-            )
+        _send_email_safely(
+            user.email,
+            "Order Confirmation",
+            order_confirmation(user, order),
         )
 
         return order
@@ -233,6 +245,7 @@ def cancel_order(
     order = (
         db.query(Order)
         .options(joinedload(Order.user))
+        .with_for_update()
         .filter(
             Order.user_id == user.id,
             Order.id == order_id,
@@ -252,8 +265,25 @@ def cancel_order(
             detail="Order already cancelled",
         )
 
+    if order.status not in {"Pending", "Confirmed"}:
+        raise HTTPException(
+            status_code=400,
+            detail="Only pending or confirmed orders can be cancelled",
+        )
+
+    for item in order.items:
+        product = db.query(Product).filter(Product.id == item.product_id).first()
+        if product is not None:
+            product.stock += item.quantity
+
+    payment = db.query(Payment).filter(Payment.order_id == order.id).first()
+    if payment is not None and payment.status == "Completed":
+        payment.status = "Refunded"
+        order.payment_status = "Refunded"
+    else:
+        order.payment_status = "Pending"
+
     order.status = "Cancelled"
-    order.payment_status = "Refunded"
 
     tracking = OrderTracking(
         order_id=order.id,
@@ -267,15 +297,10 @@ def cancel_order(
 
     db.refresh(order)
 
-    asyncio.create_task(
-        send_email(
-            user.email,
-            "Order Cancelled",
-            cancelled(
-                user,
-                order,
-            ),
-        )
+    _send_email_safely(
+        user.email,
+        "Order Cancelled",
+        cancelled(user, order),
     )
 
     return order
@@ -308,6 +333,7 @@ def update_order_status(
     order = (
         db.query(Order)
         .options(joinedload(Order.user))
+    .with_for_update()
         .filter(Order.id == order_id)
         .first()
     )
@@ -317,6 +343,48 @@ def update_order_status(
             status_code=404,
             detail="Order not found",
         )
+
+    allowed_transitions = {
+        "Pending": {"Confirmed", "Cancelled"},
+        "Confirmed": {"Packed", "Cancelled"},
+        "Packed": {"Shipped"},
+        "Shipped": {"Out for Delivery", "Delivered"},
+        "Out for Delivery": {"Delivered"},
+        "Delivered": {"Returned"},
+        "Returned": {"Refunded"},
+        "Cancelled": set(),
+        "Refunded": set(),
+    }
+    if status != order.status and status not in allowed_transitions.get(order.status, set()):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot move order from {order.status} to {status}",
+        )
+
+    if status == order.status:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Order is already {status}",
+        )
+
+    if status == "Cancelled":
+        if order.status == "Cancelled":
+            raise HTTPException(status_code=400, detail="Order already cancelled")
+        if order.status not in {"Pending", "Confirmed"}:
+            raise HTTPException(
+                status_code=400,
+                detail="Only pending or confirmed orders can be cancelled",
+            )
+        payment = db.query(Payment).filter(Payment.order_id == order.id).first()
+        if payment is not None and payment.status == "Completed":
+            payment.status = "Refunded"
+            order.payment_status = "Refunded"
+        else:
+            order.payment_status = "Pending"
+        for item in order.items:
+            product = db.query(Product).filter(Product.id == item.product_id).first()
+            if product is not None:
+                product.stock += item.quantity
 
     order.status = status
 
@@ -328,10 +396,10 @@ def update_order_status(
 
     db.add(tracking)
 
-    if status == "Delivered":
-        order.payment_status = "Completed"
-
-    elif status == "Refunded":
+    if status == "Refunded":
+        payment = db.query(Payment).filter(Payment.order_id == order.id).first()
+        if payment is not None:
+            payment.status = "Refunded"
         order.payment_status = "Refunded"
 
     db.commit()
@@ -340,41 +408,26 @@ def update_order_status(
 
     if status == "Shipped":
 
-        asyncio.create_task(
-            send_email(
-                order.user.email,
-                "Order Shipped",
-                shipped(
-                    order.user,
-                    order,
-                ),
-            )
+        _send_email_safely(
+            order.user.email,
+            "Order Shipped",
+            shipped(order.user, order),
         )
 
     elif status == "Delivered":
 
-        asyncio.create_task(
-            send_email(
-                order.user.email,
-                "Order Delivered",
-                delivered(
-                    order.user,
-                    order,
-                ),
-            )
+        _send_email_safely(
+            order.user.email,
+            "Order Delivered",
+            delivered(order.user, order),
         )
 
     elif status == "Cancelled":
 
-        asyncio.create_task(
-            send_email(
-                order.user.email,
-                "Order Cancelled",
-                cancelled(
-                    order.user,
-                    order,
-                ),
-            )
+        _send_email_safely(
+            order.user.email,
+            "Order Cancelled",
+            cancelled(order.user, order),
         )
 
     return order
@@ -382,12 +435,13 @@ def update_order_status(
 
 def get_order_tracking(
     db: Session,
+    user: User,
     order_id: int,
 ):
 
     order = (
         db.query(Order)
-        .filter(Order.id == order_id)
+        .filter(Order.id == order_id, Order.user_id == user.id)
         .first()
     )
 

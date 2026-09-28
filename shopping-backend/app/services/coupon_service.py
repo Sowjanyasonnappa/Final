@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
 
@@ -28,6 +28,9 @@ def validate_coupon(db: Session, code: str):
         raise HTTPException(status_code=404, detail="Coupon not found")
     if coupon.active != 1:
         raise HTTPException(status_code=400, detail="Coupon is inactive")
-    if coupon.expiry_date < datetime.utcnow():
+    expiry_date = coupon.expiry_date
+    if expiry_date.tzinfo is None:
+        expiry_date = expiry_date.replace(tzinfo=timezone.utc)
+    if expiry_date < datetime.now(timezone.utc):
         raise HTTPException(status_code=400, detail="Coupon expired")
     return coupon

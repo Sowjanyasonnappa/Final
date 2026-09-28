@@ -8,7 +8,7 @@ export default function Navbar() {
     <nav className="sticky top-0 z-40 border-b border-white/10 bg-slate-950/70 backdrop-blur-xl">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
         <Link to="/" className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 via-violet-500 to-cyan-400 font-semibold shadow-lg shadow-cyan-500/20">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-linear-to-br from-blue-500 via-violet-500 to-cyan-400 font-semibold shadow-lg shadow-cyan-500/20">
             S
           </div>
           <div className="hidden sm:block">
@@ -28,7 +28,7 @@ export default function Navbar() {
           <div className="flex items-center gap-3">
             <button className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/10 text-sm transition hover:bg-white/20">🔔</button>
             <Link to="/settings" className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/10 text-sm transition hover:bg-white/20">⚙</Link>
-            <Link to="/profile" className="flex h-10 w-10 items-center justify-center rounded-full border border-cyan-400/20 bg-gradient-to-br from-cyan-500/20 to-violet-500/20 text-sm font-semibold text-white">
+            <Link to="/profile" className="flex h-10 w-10 items-center justify-center rounded-full border border-cyan-400/20 bg-linear-to-br from-cyan-500/20 to-violet-500/20 text-sm font-semibold text-white">
               {user.email?.slice(0, 1).toUpperCase() || 'U'}
             </Link>
           </div>

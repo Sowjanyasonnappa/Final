@@ -4,7 +4,7 @@ export default function Footer() {
       <div className="mx-auto grid max-w-7xl gap-8 px-4 py-8 sm:px-6 lg:grid-cols-[1.1fr_0.9fr_0.8fr] lg:px-8">
         <div>
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 via-violet-500 to-cyan-400 text-lg font-semibold shadow-lg shadow-cyan-500/20">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-linear-to-br from-blue-500 via-violet-500 to-cyan-400 text-lg font-semibold shadow-lg shadow-cyan-500/20">
               S
             </div>
             <div>

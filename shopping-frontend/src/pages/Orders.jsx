@@ -19,7 +19,7 @@ export default function Orders() {
       ) : (
         <div className="space-y-4">
           {orders.map((order) => (
-            <div className="card-surface flex flex-col gap-4 rounded-[24px] sm:flex-row sm:items-center sm:justify-between" key={order.id}>
+            <div className="card-surface flex flex-col gap-4 rounded-3xl sm:flex-row sm:items-center sm:justify-between" key={order.id}>
               <div>
                 <p className="text-lg font-semibold text-white">Order #{order.id}</p>
                 <p className="mt-1 text-sm text-slate-400">Status: {order.status}</p>

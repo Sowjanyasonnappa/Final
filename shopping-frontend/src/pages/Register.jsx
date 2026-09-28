@@ -45,7 +45,7 @@ export default function Register() {
 
         <div className="panel p-6 sm:p-8">
           <div className="mb-6 flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 via-violet-500 to-cyan-400 font-semibold shadow-lg shadow-cyan-500/20">S</div>
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-linear-to-br from-blue-500 via-violet-500 to-cyan-400 font-semibold shadow-lg shadow-cyan-500/20">S</div>
             <div>
               <p className="text-xl font-semibold text-white">Create account</p>
               <p className="text-sm text-slate-400">Start your premium commerce journey</p>

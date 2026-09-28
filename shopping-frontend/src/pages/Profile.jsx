@@ -6,7 +6,7 @@ export default function Profile() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
       <div className="card-surface overflow-hidden p-0">
-        <div className="h-36 bg-gradient-to-r from-blue-500/30 via-violet-500/25 to-cyan-400/20" />
+        <div className="h-36 bg-linear-to-r from-blue-500/30 via-violet-500/25 to-cyan-400/20" />
         <div className="px-6 pb-6 sm:px-8">
           <div className="-mt-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div className="flex items-end gap-4">
@@ -24,7 +24,7 @@ export default function Profile() {
               { label: 'Role', value: user?.role || 'USER' },
               { label: 'Status', value: 'Active' }
             ].map((item) => (
-              <div key={item.label} className="rounded-[22px] border border-white/10 bg-white/8 p-4">
+              <div key={item.label} className="rounded-2xl border border-white/10 bg-white/8 p-4">
                 <p className="text-sm text-slate-400">{item.label}</p>
                 <p className="mt-2 font-semibold text-white">{item.value}</p>
               </div>

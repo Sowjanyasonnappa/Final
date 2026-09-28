@@ -1,9 +1,13 @@
 from sqlalchemy.orm import Session
+from fastapi import HTTPException
 
 from app.database.models import Product
+from app.database.order_item_model import OrderItem
 
 
 def product_to_dict(product):
+
+    image = product.image_url or product.thumbnail_url
 
     return {
         "id": product.id,
@@ -11,10 +15,15 @@ def product_to_dict(product):
         "category": product.category,
         "price": product.price,
         "stock": product.stock,
+        "description": None,
+        "discount": 0,
         "image_url": product.image_url,
         "thumbnail_url": product.thumbnail_url,
+        "image": image,
+        "images": [image] if image else [],
         "average_rating": product.average_rating,
         "total_reviews": product.total_reviews,
+        "rating": product.average_rating,
     }
 
 
@@ -106,6 +115,12 @@ def delete_product(
 
     if db_product is None:
         return False
+
+    if db.query(OrderItem).filter(OrderItem.product_id == product_id).first():
+        raise HTTPException(
+            status_code=409,
+            detail="Products with order history cannot be deleted",
+        )
 
     db.delete(db_product)
 

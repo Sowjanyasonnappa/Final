@@ -377,11 +377,13 @@ async def get_sales_dashboard(
     ).scalar() or 0.0
 
     today_order_count = db.query(func.count(order_model.Order.id)).filter(
-        func.date(order_model.Order.created_at) == today
+        func.date(order_model.Order.created_at) == today,
+        order_model.Order.payment_status == "Completed"
     ).scalar() or 0
 
     month_order_count = db.query(func.count(order_model.Order.id)).filter(
-        func.date(order_model.Order.created_at) >= month_start
+        func.date(order_model.Order.created_at) >= month_start,
+        order_model.Order.payment_status == "Completed"
     ).scalar() or 0
 
     total_customers = db.query(order_model.Order.user_id).filter(

@@ -53,4 +53,4 @@ class InventoryHistory(Base):
         server_default=func.now(),
     )
 
-    product = relationship("Product")
+    product = relationship("Product", overlaps="inventory_logs")

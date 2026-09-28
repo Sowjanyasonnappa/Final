@@ -1,14 +1,14 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 class ReviewCreate(BaseModel):
 
-    rating: int
+    rating: int = Field(ge=1, le=5)
 
     comment: str
 
 
 class ReviewUpdate(BaseModel):
 
-    rating: int
+    rating: int = Field(ge=1, le=5)
 
     comment: str

@@ -124,5 +124,6 @@ def order_tracking(
 
     return get_order_tracking(
         db,
+        current_user,
         order_id,
     )

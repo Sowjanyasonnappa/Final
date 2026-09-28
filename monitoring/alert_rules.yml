@@ -78,7 +78,7 @@ groups:
           description: "Container {{ $labels.container }} in pod {{ $labels.namespace }}/{{ $labels.pod }} was OOM killed"
 
       - alert: PersistentVolumeFillingUp
-        expr: (kubelet_volume_stats_used_bytes / kubelet_volume_stats_capacity_bytes) > 0.9
+        expr: kubelet_volume_stats_capacity_bytes > 0 and (kubelet_volume_stats_used_bytes / kubelet_volume_stats_capacity_bytes) > 0.9
         for: 5m
         labels:
           severity: warning
@@ -124,7 +124,7 @@ groups:
           description: "Disk {{ $labels.device }} on {{ $labels.instance }} has less than 10% space available"
 
       - alert: DiskReadLatency
-        expr: rate(node_disk_read_time_seconds_total[5m]) / rate(node_disk_reads_completed_total[5m]) > 0.1
+        expr: rate(node_disk_read_time_seconds_total[5m]) / clamp_min(rate(node_disk_reads_completed_total[5m]), 1) > 0.1
         for: 10m
         labels:
           severity: warning

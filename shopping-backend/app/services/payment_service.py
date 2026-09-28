@@ -23,6 +23,16 @@ VALID_PAYMENT_METHODS = [
 ]
 
 
+def _send_email_safely(recipient, subject, body):
+    coroutine = send_email(recipient, subject, body)
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        asyncio.run(coroutine)
+    else:
+        loop.create_task(coroutine)
+
+
 def process_payment(
     db: Session,
     current_user: User,
@@ -38,6 +48,7 @@ def process_payment(
 
     order = (
         db.query(Order)
+        .with_for_update()
         .filter(
             Order.id == order_id,
             Order.user_id == current_user.id,
@@ -51,8 +62,15 @@ def process_payment(
             detail="Order not found",
         )
 
+    if order.status == "Cancelled" or order.payment_status == "Refunded":
+        raise HTTPException(
+            status_code=400,
+            detail="Cancelled orders cannot be paid",
+        )
+
     payment = (
         db.query(Payment)
+        .with_for_update()
         .filter(Payment.order_id == order.id)
         .first()
     )
@@ -85,15 +103,10 @@ def process_payment(
 
     db.refresh(payment)
 
-    asyncio.create_task(
-        send_email(
-            current_user.email,
-            "Payment Successful",
-            payment_success(
-                current_user,
-                payment,
-            ),
-        )
+    _send_email_safely(
+        current_user.email,
+        "Payment Successful",
+        payment_success(current_user, payment),
     )
 
     return {

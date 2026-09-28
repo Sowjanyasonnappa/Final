@@ -20,7 +20,7 @@ export default function ProductDetails() {
 
   const handleQuantityChange = (value) => {
     const nextValue = Number(value);
-    if (Number.isNaN(nextValue) || nextValue < 1) return setQuantity(1);
+    if (!Number.isInteger(nextValue) || nextValue < 1) return setQuantity(1);
     setQuantity(nextValue);
   };
 
@@ -59,12 +59,12 @@ export default function ProductDetails() {
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
       <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
         <div className="card-surface overflow-hidden p-0">
-          <div className="h-[360px] bg-gradient-to-br from-blue-500/20 via-violet-500/20 to-cyan-400/20 p-4">
-            <img src={product.image || product.images?.[0]} alt={product.name} className="h-full w-full rounded-[24px] object-cover" />
+          <div className="h-90 bg-linear-to-br from-blue-500/20 via-violet-500/20 to-cyan-400/20 p-4">
+            <img src={product.image || product.images?.[0]} alt={product.name} className="h-full w-full rounded-3xl object-cover" />
           </div>
           <div className="grid gap-3 p-4 sm:grid-cols-3">
             {(product.images || [product.image]).slice(0, 3).map((image, index) => (
-              <div key={index} className="h-24 overflow-hidden rounded-[18px] border border-white/10 bg-white/8">
+              <div key={index} className="h-24 overflow-hidden rounded-2xl border border-white/10 bg-white/8">
                 <img src={image} alt={`${product.name} ${index + 1}`} className="h-full w-full object-cover" />
               </div>
             ))}
@@ -86,7 +86,7 @@ export default function ProductDetails() {
               <p className="text-2xl font-semibold text-white">{product.stock}</p>
             </div>
           </div>
-          <div className="rounded-[24px] border border-white/10 bg-white/8 p-4">
+          <div className="rounded-3xl border border-white/10 bg-white/8 p-4">
             <div className="flex items-center justify-between text-sm text-slate-300">
               <span>Selected quantity</span>
               <span className="font-semibold text-white">{quantity}</span>
@@ -96,7 +96,7 @@ export default function ProductDetails() {
               <span className="font-semibold text-cyan-300">${totalAmount}</span>
             </div>
           </div>
-          <div className="rounded-[24px] border border-white/10 bg-white/8 p-4">
+          <div className="rounded-3xl border border-white/10 bg-white/8 p-4">
             <div className="flex items-center justify-between text-sm text-slate-300">
               <span>Rating</span>
               <span className="font-semibold text-white">⭐ {product.rating}</span>
@@ -112,7 +112,7 @@ export default function ProductDetails() {
               <input className="w-full border-0 bg-transparent outline-none" value={quantity} onChange={(e) => handleQuantityChange(e.target.value)} />
             </label>
             <button className="btn-primary" onClick={handleAddToCart} disabled={submitting}>{submitting ? 'Working...' : 'Add to cart'}</button>
-            <button className="btn-secondary" onClick={handleBuyNow} disabled={submitting}>Buy now</button>
+            <button className="btn-secondary" onClick={handleBuyNow} disabled={submitting}>Add and view cart</button>
           </div>
           {message ? <p className="text-sm text-amber-300">{message}</p> : null}
         </div>
@@ -146,8 +146,8 @@ export default function ProductDetails() {
         </div>
         <div className="grid gap-4 md:grid-cols-3">
           {sampleProducts.slice(0, 3).map((item) => (
-            <div key={item.id} className="rounded-[22px] border border-white/10 bg-white/8 p-4">
-              <div className="mb-3 h-28 overflow-hidden rounded-[18px] border border-white/10 bg-gradient-to-br from-blue-500/20 via-violet-500/20 to-cyan-400/20">
+            <div key={item.id} className="rounded-2xl border border-white/10 bg-white/8 p-4">
+              <div className="mb-3 h-28 overflow-hidden rounded-2xl border border-white/10 bg-linear-to-br from-blue-500/20 via-violet-500/20 to-cyan-400/20">
                 <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
               </div>
               <p className="font-semibold text-white">{item.name}</p>

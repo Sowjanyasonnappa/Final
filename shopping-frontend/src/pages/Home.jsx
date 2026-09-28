@@ -61,7 +61,7 @@ export default function Home() {
 
         <section className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {stats.map((stat) => (
-            <div key={stat.label} className={`card-surface bg-gradient-to-br ${stat.tone}`}>
+            <div key={stat.label} className={`card-surface bg-linear-to-br ${stat.tone}`}>
               <p className="text-sm text-slate-300">{stat.label}</p>
               <p className="mt-3 text-3xl font-semibold text-white">{stat.value}</p>
             </div>
@@ -113,8 +113,8 @@ export default function Home() {
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               {sampleProducts.slice(0, 4).map((product) => (
-                <div key={product.id} className="rounded-[22px] border border-white/10 bg-white/8 p-4">
-                  <div className="mb-3 h-28 rounded-[18px] bg-gradient-to-br from-blue-500/20 via-violet-500/20 to-cyan-400/20" />
+                <div key={product.id} className="rounded-2xl border border-white/10 bg-white/8 p-4">
+                  <div className="mb-3 h-28 rounded-2xl bg-linear-to-br from-blue-500/20 via-violet-500/20 to-cyan-400/20" />
                   <p className="font-semibold text-white">{product.name}</p>
                   <p className="mt-1 text-sm text-slate-400">{product.category}</p>
                   <p className="mt-3 text-lg font-semibold text-cyan-300">${product.price}</p>
